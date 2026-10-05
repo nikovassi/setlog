@@ -1,0 +1,47 @@
+import { Link } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/Icon';
+import { PageHeader } from '../components/PageHeader';
+import { db } from '../db';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { plural } from '../utils/plural';
+
+export default function RoutinesPage() {
+  const routines = useLiveQuery(async () => {
+    const [routines, exercises] = await Promise.all([db.routines.orderBy('name').toArray(), db.exercises.toArray()]);
+    const names = new Map(exercises.map((e) => [e.id, e.name]));
+    return routines.map((r) => ({ ...r, names: r.exercises.map((e) => names.get(e.exerciseId) ?? '?') }));
+  }, []);
+
+  return (
+    <main className="page" id="main">
+      <PageHeader
+        title="Routines"
+        back
+        actions={
+          <Link to="/routines/new" className="btn btn-sm btn-primary">
+            <Icon name="plus" size={18} /> New
+          </Link>
+        }
+      />
+      {routines?.length === 0 && (
+        <EmptyState icon="list" title="No routines yet" action={<Link to="/routines/new" className="btn btn-primary">Create routine</Link>}>
+          A routine is a list of exercises – e.g. Push, Pull, Legs. Starting one loads every exercise with your last numbers.
+        </EmptyState>
+      )}
+      <ul className="list">
+        {routines?.map((r) => (
+          <li key={r.id}>
+            <Link to={`/routines/${r.id}`} className="card card-link">
+              <h3>{r.name}</h3>
+              {r.description && <p className="small muted">{r.description}</p>}
+              <p className="small muted truncate" style={{ marginTop: 4 }}>
+                {plural(r.exercises.length, 'exercise')} · {r.names.join(', ')}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
