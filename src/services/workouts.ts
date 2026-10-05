@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { Workout, WorkoutExercise, WorkoutSet } from '../types';
 import { isWorkingSet } from '../utils/calc';
 import { todayLocal } from '../utils/format';
+import { t } from '../i18n';
 import { newId } from '../utils/id';
 import { detectPRs, type PRKind } from '../utils/pr';
 
@@ -82,7 +83,7 @@ export async function startWorkout(opts: { routineId?: string; name?: string } =
 
 function defaultWorkoutName(d: Date): string {
   const h = d.getHours();
-  return h < 12 ? 'Morning Workout' : h < 18 ? 'Afternoon Workout' : 'Evening Workout';
+  return t(h < 12 ? 'workout.morning' : h < 18 ? 'workout.afternoon' : 'workout.evening');
 }
 
 export async function updateWorkout(id: string, patch: Partial<Pick<Workout, 'name' | 'notes' | 'date' | 'startTime' | 'endTime'>>): Promise<void> {

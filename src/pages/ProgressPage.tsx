@@ -6,11 +6,12 @@ import { PageHeader } from '../components/PageHeader';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { exerciseSeries, loadDataset, mostTrained, overview, prTimeline, weeklyFrequency, weeklyVolume } from '../services/stats';
 import { formatDayMonth, formatNumber, setLabel } from '../utils/format';
-import { PR_LABEL } from '../utils/pr';
-import { plural } from '../utils/plural';
+import { prLabel } from '../utils/pr';
+import { useI18n } from '../i18n/react';
 
 export default function ProgressPage() {
   const [picked, setPicked] = useState<string | null>(null);
+  const { t, pl, exerciseName } = useI18n();
   const data = useLiveQuery(async () => {
     const ds = await loadDataset();
     const top = mostTrained(ds, 6);
@@ -25,70 +26,85 @@ export default function ProgressPage() {
 
   return (
     <main className="page" id="main">
-      <PageHeader title="Progress" actions={<Link to="/exercises" className="btn btn-sm">Exercises</Link>} />
+      <PageHeader
+        title={t('progress.title')}
+        actions={
+          <Link to="/exercises" className="btn btn-sm">
+            {t('exl.title')}
+          </Link>
+        }
+      />
       {stats.totalWorkouts === 0 ? (
-        <EmptyState icon="chart" title="No progress to show yet" action={<Link to="/workout" className="btn btn-primary">Start workout</Link>}>
-          Finish a workout and your volume, frequency and records will show up here.
+        <EmptyState
+          icon="chart"
+          title={t('progress.emptyTitle')}
+          action={
+            <Link to="/workout" className="btn btn-primary">
+              {t('home.start')}
+            </Link>
+          }
+        >
+          {t('progress.emptyText')}
         </EmptyState>
       ) : (
         <>
           <dl className="stat-grid">
             <div className="stat">
-              <dt>Total</dt>
+              <dt>{t('stat.total')}</dt>
               <dd>{stats.totalWorkouts}</dd>
             </div>
             <div className="stat">
-              <dt>This week</dt>
+              <dt>{t('stat.thisWeek')}</dt>
               <dd>{stats.thisWeek}</dd>
             </div>
             <div className="stat">
-              <dt>This month</dt>
+              <dt>{t('stat.thisMonth')}</dt>
               <dd>{stats.thisMonth}</dd>
             </div>
           </dl>
           <div className="stat">
-            <dt>Total volume (working sets)</dt>
+            <dt>{t('stat.totalVolume')}</dt>
             <dd>
-              {formatNumber(stats.totalVolume)} <small>kg</small>
+              {formatNumber(stats.totalVolume)} <small>{t('common.kg')}</small>
             </dd>
           </div>
 
-          <BarChartCard title="Volume per week" unit="kg" data={volume} summary={`Last 12 weeks. This week ${volume.at(-1)?.value ?? 0} kg.`} />
-          <BarChartCard title="Workouts per week" data={freq} summary={`Last 12 weeks. This week ${freq.at(-1)?.value ?? 0} workouts.`} />
+          <BarChartCard title={t('chart.volumeWeek')} unit={t('common.kg')} data={volume} summary={t('chart.weekSummary', { v: `${volume.at(-1)?.value ?? 0} ${t('common.kg')}` })} />
+          <BarChartCard title={t('chart.freqWeek')} data={freq} summary={t('chart.weekSummary', { v: pl(freq.at(-1)?.value ?? 0, 'workout') })} />
 
           {top.length > 0 && (
             <section className="stack" aria-labelledby="ex-prog-h">
               <div className="section-title">
-                <h2 id="ex-prog-h">Exercise progression</h2>
+                <h2 id="ex-prog-h">{t('progress.exProg')}</h2>
               </div>
-              <div className="chips" role="group" aria-label="Choose exercise">
+              <div className="chips" role="group" aria-label={t('progress.choose')}>
                 {top.map(({ exercise }) => (
                   <button key={exercise.id} type="button" className="chip" aria-pressed={exercise.id === exerciseId} onClick={() => setPicked(exercise.id)}>
-                    {exercise.name}
+                    {exerciseName(exercise)}
                   </button>
                 ))}
               </div>
               {series.length >= 2 ? (
                 <>
-                  <LineChartCard title="Top-set weight" unit="kg" data={series.map((p) => ({ label: p.label, value: p.weight }))} summary={`From ${series[0].weight} to ${series.at(-1)!.weight} kg.`} />
-                  <LineChartCard title="Estimated 1RM (Epley)" unit="kg" data={series.map((p) => ({ label: p.label, value: p.e1rm }))} summary={`From ${series[0].e1rm} to ${series.at(-1)!.e1rm} kg.`} />
+                  <LineChartCard title={t('chart.topSet')} unit={t('common.kg')} data={series.map((p) => ({ label: p.label, value: p.weight }))} summary={t('chart.range', { a: series[0].weight, b: series.at(-1)!.weight })} />
+                  <LineChartCard title={t('chart.e1rmEpley')} unit={t('common.kg')} data={series.map((p) => ({ label: p.label, value: p.e1rm }))} summary={t('chart.range', { a: series[0].e1rm, b: series.at(-1)!.e1rm })} />
                 </>
               ) : (
-                <p className="small muted">Log this exercise in at least two workouts to see a trend.</p>
+                <p className="small muted">{t('progress.needTwo')}</p>
               )}
             </section>
           )}
 
           <section aria-labelledby="most-h">
             <div className="section-title">
-              <h2 id="most-h">Most trained</h2>
+              <h2 id="most-h">{t('progress.most')}</h2>
             </div>
             <ul className="card divider-list" style={{ padding: '0 14px', marginTop: 8 }}>
               {top.map(({ exercise, sessions }) => (
                 <li key={exercise.id}>
                   <Link to={`/exercise/${exercise.id}`} className="spread" style={{ minHeight: 48, textDecoration: 'none' }}>
-                    <span>{exercise.name}</span>
-                    <span className="muted small">{plural(sessions, 'session')}</span>
+                    <span>{exerciseName(exercise)}</span>
+                    <span className="muted small">{pl(sessions, 'session')}</span>
                   </Link>
                 </li>
               ))}
@@ -97,19 +113,19 @@ export default function ProgressPage() {
 
           <section aria-labelledby="pr-h">
             <div className="section-title">
-              <h2 id="pr-h">Recent personal records</h2>
+              <h2 id="pr-h">{t('progress.prs')}</h2>
             </div>
             {prs.length === 0 ? (
               <p className="small muted" style={{ marginTop: 8 }}>
-                Records appear once you beat a previous session.
+                {t('progress.noPrs')}
               </p>
             ) : (
               <ul className="card divider-list" style={{ padding: '0 14px', marginTop: 8 }}>
                 {prs.map((p) => (
                   <li key={p.set.id} className="spread" style={{ minHeight: 56, padding: '6px 0' }}>
                     <span className="grow">
-                      <strong style={{ display: 'block' }}>{p.exercise?.name}</strong>
-                      <span className="small muted">{p.kinds.map((k) => PR_LABEL[k]).join(' · ')}</span>
+                      <strong style={{ display: 'block' }}>{exerciseName(p.exercise)}</strong>
+                      <span className="small muted">{p.kinds.map(prLabel).join(' · ')}</span>
                     </span>
                     <span className="num" style={{ textAlign: 'right' }}>
                       <strong className="pr-tag">{setLabel(p.set.weight, p.set.reps)}</strong>

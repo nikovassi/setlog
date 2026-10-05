@@ -8,6 +8,7 @@ import { RestTimerProvider } from './hooks/restTimer';
 import { ToastProvider } from './hooks/toast';
 import { useActiveWorkout } from './hooks/useActiveWorkout';
 import { useSettings } from './hooks/useSettings';
+import { LanguageProvider, useI18n } from './i18n/react';
 import HomePage from './pages/HomePage';
 import WorkoutPage from './pages/WorkoutPage';
 
@@ -39,6 +40,7 @@ function useTheme() {
 function Shell() {
   useTheme();
   const { pathname } = useLocation();
+  const { t } = useI18n();
   const active = useActiveWorkout();
   // The live workout and the routine editor have their own action bar instead of the main nav.
   const ownBar = (pathname === '/workout' && !!active) || pathname.startsWith('/routines/');
@@ -55,7 +57,7 @@ function Shell() {
           main?.setAttribute('tabindex', '-1');
           main?.focus();
         }}>
-        Skip to content
+        {t('common.skip')}
       </a>
       <ErrorBoundary>
         <Suspense fallback={<main className="page" aria-busy="true" />}>
@@ -82,13 +84,15 @@ function Shell() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <RestTimerProvider>
-        <HashRouter>
-          <Shell />
-        </HashRouter>
-        {import.meta.env.PROD && <UpdatePrompt />}
-      </RestTimerProvider>
-    </ToastProvider>
+    <LanguageProvider>
+      <ToastProvider>
+        <RestTimerProvider>
+          <HashRouter>
+            <Shell />
+          </HashRouter>
+          {import.meta.env.PROD && <UpdatePrompt />}
+        </RestTimerProvider>
+      </ToastProvider>
+    </LanguageProvider>
   );
 }

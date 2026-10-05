@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Sheet } from '../../components/Sheet';
 import type { Settings, WorkoutSet } from '../../types';
+import { useI18n } from '../../i18n/react';
 import { formatDayMonth, formatWeight, setLabel } from '../../utils/format';
 import { suggestNext } from '../../utils/progression';
 import { SetRow } from './SetRow';
@@ -32,12 +33,13 @@ interface Props {
 }
 
 export const ExerciseCard = memo(function ExerciseCard({ item, index, count, settings, prSetIds, showLast, actions }: Props) {
+  const { t, exerciseName, muscleName, equipmentName } = useI18n();
   const [menu, setMenu] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(item.we.notes);
   const [detailSet, setDetailSet] = useState<WorkoutSet | null>(null);
   const { exercise, sets, last, label } = item;
-  const name = exercise?.name ?? 'Unknown exercise';
+  const name = exerciseName(exercise);
 
   const cfg = {
     repMin: exercise?.repMin ?? settings.repMin,
@@ -56,7 +58,7 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
       <div className="ex-head">
         <div className="grow">
           <h2 id={`ex-${item.we.id}`} style={{ fontSize: 'inherit' }}>
-            {label && <span className="ss-badge" aria-label={`Superset ${label}`}>{label}</span>}
+            {label && <span className="ss-badge" aria-label={t('card.supersetLabel', { label })}>{label}</span>}
             {exercise ? (
               <Link className="ex-name" to={`/exercise/${exercise.id}`}>
                 {name}
@@ -66,11 +68,11 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
             )}
           </h2>
           <div className="small muted">
-            {exercise?.muscleGroup}
-            {exercise?.equipment ? ` · ${exercise.equipment}` : ''}
+            {muscleName(exercise?.muscleGroup)}
+            {exercise?.equipment ? ` · ${equipmentName(exercise.equipment)}` : ''}
           </div>
         </div>
-        <button type="button" className="icon-btn" aria-label={`${name} options`} onClick={() => setMenu(true)}>
+        <button type="button" className="icon-btn" aria-label={t('card.options', { name })} onClick={() => setMenu(true)}>
           <Icon name="more" />
         </button>
       </div>
@@ -78,14 +80,14 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
       {item.we.notes && !editingNotes && <p className="ex-notes">“{item.we.notes}”</p>}
 
       {showLast && (
-        <div className="last-time" aria-label={`Last time for ${name}`}>
+        <div className="last-time" aria-label={t('card.lastTimeFor', { name })}>
           {last ? (
             <>
-              <span className="muted">Last time · {formatDayMonth(last.workout.date)}</span>
+              <span className="muted">{t('card.lastTime', { date: formatDayMonth(last.workout.date) })}</span>
               <ol>
                 {last.sets.map((s) => (
                   <li key={s.id} className={s.isWarmup ? 'faint' : ''}>
-                    {s.isWarmup ? 'W ' : ''}
+                    {s.isWarmup ? `${t('set.warmupShort')} ` : ''}
                     {setLabel(s.weight, s.reps)}
                     {s.rpe ? ` @${s.rpe}` : ''}
                   </li>
@@ -93,7 +95,7 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
               </ol>
             </>
           ) : (
-            <span className="muted">First time – no previous data.</span>
+            <span className="muted">{t('card.firstTime')}</span>
           )}
         </div>
       )}
@@ -101,28 +103,28 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
       {suggestion.kind !== 'none' && pending.length > 0 && (
         <div className="suggest">
           <span>
-            Suggested:{' '}
+            {t('card.suggested')}{' '}
             <strong className="num">
-              {suggestion.weight ? `${formatWeight(suggestion.weight)} kg × ${suggestion.reps}` : `${suggestion.reps} reps`}
+              {setLabel(suggestion.weight, suggestion.reps)}
             </strong>
-            {suggestion.kind === 'increase' && <span className="muted"> (+{formatWeight(suggestion.delta)} kg)</span>}
+            {suggestion.kind === 'increase' && <span className="muted"> (+{formatWeight(suggestion.delta)} {t('common.kg')})</span>}
           </span>
           {!suggestionApplied && (
             <button type="button" className="btn btn-sm btn-ghost" onClick={() => actions.onApplySuggestion(item, suggestion.weight, suggestion.reps)}>
-              Use
+              {t('card.use')}
             </button>
           )}
         </div>
       )}
 
       <div className="sets-head" aria-hidden>
-        <span>Set</span>
-        <span>kg</span>
-        <span>Reps</span>
+        <span>{t('card.set')}</span>
+        <span>{t('common.kg')}</span>
+        <span>{t('card.reps')}</span>
         <span />
         <span />
       </div>
-      <ol className="divider-list" style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label={`${name} sets`}>
+      <ol className="divider-list" style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label={t('card.setsOf', { name })}>
         {sets.map((s, i) => (
           <SetRow
             key={s.id}
@@ -138,7 +140,7 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
       </ol>
       <div className="ex-foot">
         <button type="button" className="btn btn-sm grow" onClick={() => actions.onAddSet(item)}>
-          <Icon name="plus" size={18} /> Add set
+          <Icon name="plus" size={18} /> {t('card.addSet')}
         </button>
       </div>
 
@@ -159,33 +161,33 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
           <ul className="menu-list">
             <li>
               <button type="button" className="menu-item" onClick={() => (setMenu(false), setEditingNotes(true))}>
-                <Icon name="note" /> {item.we.notes ? 'Edit note' : 'Add note'}
+                <Icon name="note" /> {item.we.notes ? t('card.editNote') : t('card.addNote')}
               </button>
             </li>
             {index < count - 1 && (
               <li>
                 <button type="button" className="menu-item" onClick={() => (setMenu(false), actions.onSuperset(item))}>
-                  <Icon name="link" /> {label && !item.endsSuperset ? 'Unlink from next (superset)' : 'Superset with next exercise'}
+                  <Icon name="link" /> {label && !item.endsSuperset ? t('card.unlink') : t('card.superset')}
                 </button>
               </li>
             )}
             {index > 0 && (
               <li>
                 <button type="button" className="menu-item" onClick={() => (setMenu(false), actions.onMove(item, -1))}>
-                  <Icon name="up" /> Move up
+                  <Icon name="up" /> {t('card.moveUp')}
                 </button>
               </li>
             )}
             {index < count - 1 && (
               <li>
                 <button type="button" className="menu-item" onClick={() => (setMenu(false), actions.onMove(item, 1))}>
-                  <Icon name="down" /> Move down
+                  <Icon name="down" /> {t('card.moveDown')}
                 </button>
               </li>
             )}
             <li>
               <button type="button" className="menu-item danger" onClick={() => (setMenu(false), actions.onRemove(item))}>
-                <Icon name="trash" /> Remove exercise
+                <Icon name="trash" /> {t('card.remove')}
               </button>
             </li>
           </ul>
@@ -194,7 +196,7 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
 
       {editingNotes && (
         <Sheet
-          title="Exercise note"
+          title={t('card.noteTitle')}
           focusFirstInput
           onClose={() => setEditingNotes(false)}
           footer={
@@ -206,13 +208,13 @@ export const ExerciseCard = memo(function ExerciseCard({ item, index, count, set
                 setEditingNotes(false);
               }}
             >
-              Save note
+              {t('card.saveNote')}
             </button>
           }
         >
           <label className="field">
-            <span>Note for {name}</span>
-            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Increase weight next time…" />
+            <span>{t('card.noteFor', { name })}</span>
+            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('card.notePh')} />
           </label>
         </Sheet>
       )}

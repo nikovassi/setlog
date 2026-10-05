@@ -1,5 +1,6 @@
 import { db } from '../db';
 import type { Routine, RoutineExercise, Workout } from '../types';
+import { t } from '../i18n';
 import { newId } from '../utils/id';
 import { ValidationError } from './exercises';
 import { getWorkoutExercises } from './workouts';
@@ -12,7 +13,7 @@ export interface RoutineInput {
 
 export async function saveRoutine(input: RoutineInput, id?: string): Promise<Routine> {
   const name = input.name.trim();
-  if (!name) throw new ValidationError('Please enter a name.');
+  if (!name) throw new ValidationError(t('err.nameRequired'));
   const now = new Date().toISOString();
   const prev = id ? await db.routines.get(id) : undefined;
   const routine: Routine = {

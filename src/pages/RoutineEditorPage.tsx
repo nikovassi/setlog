@@ -11,12 +11,14 @@ import { deleteRoutine, saveRoutine } from '../services/routines';
 import { ValidationError } from '../services/exercises';
 import { regroup, startWorkout, supersetLabels } from '../services/workouts';
 import type { RoutineExercise } from '../types';
+import { useI18n } from '../i18n/react';
 
 export default function RoutineEditorPage() {
   const { id } = useParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const toast = useToast();
+  const { t, pl, exerciseName, muscleName } = useI18n();
   const routine = useLiveQuery(() => (isNew ? null : db.routines.get(id!).then((r) => r ?? null)), [id]);
   const names = useLiveQuery(async () => new Map((await db.exercises.toArray()).map((e) => [e.id, e])), []);
   const [loaded, setLoaded] = useState(isNew);
@@ -39,7 +41,7 @@ export default function RoutineEditorPage() {
   if (!isNew && routine === null) {
     return (
       <main className="page" id="main">
-        <PageHeader title="Routine not found" back="/routines" />
+        <PageHeader title={t('routine.notFound')} back="/routines" />
       </main>
     );
   }
@@ -64,60 +66,61 @@ export default function RoutineEditorPage() {
         await startWorkout({ routineId: r.id });
         navigate('/workout');
       } else navigate('/routines', { replace: true });
-      toast({ message: 'Routine saved', detail: r.name });
+      toast({ message: t('detail.routineSaved'), detail: r.name });
     } catch (e) {
-      setError(e instanceof ValidationError ? e.message : 'Could not save the routine.');
+      setError(e instanceof ValidationError ? e.message : t('routine.saveFailed'));
     }
   }
 
   return (
     <main className="page has-bar" id="main">
-      <PageHeader title={isNew ? 'New routine' : 'Edit routine'} back="/routines" />
+      <PageHeader title={isNew ? t('routine.new') : t('routine.edit')} back="/routines" />
       <label className="field">
-        <span>Name</span>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Push, Pull, Legs…" />
+        <span>{t('common.name')}</span>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('routine.namePh')} />
       </label>
       <label className="field">
-        <span>Description (optional)</span>
+        <span>{t('routine.desc')}</span>
         <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
       {error && <p className="form-error" role="alert">{error}</p>}
 
       <div className="section-title">
-        <h2>Exercises</h2>
+        <h2>{t('exl.title')}</h2>
         <span className="small faint">{items.length}</span>
       </div>
-      {items.length === 0 && <p className="muted small">Add the exercises you do in this routine.</p>}
+      {items.length === 0 && <p className="muted small">{t('routine.emptyHint')}</p>}
       <ol className="list">
         {items.map((it, i) => {
           const ex = names?.get(it.exerciseId);
+          const exName = exerciseName(ex);
           return (
             <li key={`${it.exerciseId}-${i}`} className={`card${labels[i] ? ' ex-card in-superset' : ''}`} style={{ padding: 12 }}>
               <div className="spread">
                 <div className="grow">
                   <strong>
                     {labels[i] && <span className="ss-badge">{labels[i]}</span>}
-                    {ex?.name ?? 'Unknown exercise'}
+                    {exName}
                   </strong>
-                  <div className="small muted">{ex?.muscleGroup}</div>
+                  <div className="small muted">{muscleName(ex?.muscleGroup)}</div>
                 </div>
                 <div className="row" style={{ gap: 2 }}>
-                  <button type="button" className="icon-btn" aria-label={`Fewer sets of ${ex?.name}`} onClick={() => setItems(items.map((x, k) => (k === i ? { ...x, sets: Math.max(1, x.sets - 1) } : x)))}>
+                  <button type="button" className="icon-btn" aria-label={t('routine.fewer', { name: exName })} onClick={() => setItems(items.map((x, k) => (k === i ? { ...x, sets: Math.max(1, x.sets - 1) } : x)))}>
                     −
                   </button>
                   <span className="num" style={{ minWidth: 52, textAlign: 'center' }} aria-live="polite">
-                    {it.sets} sets
+                    {pl(it.sets, 'set')}
                   </span>
-                  <button type="button" className="icon-btn" aria-label={`More sets of ${ex?.name}`} onClick={() => setItems(items.map((x, k) => (k === i ? { ...x, sets: Math.min(20, x.sets + 1) } : x)))}>
+                  <button type="button" className="icon-btn" aria-label={t('routine.more', { name: exName })} onClick={() => setItems(items.map((x, k) => (k === i ? { ...x, sets: Math.min(20, x.sets + 1) } : x)))}>
                     +
                   </button>
                 </div>
               </div>
               <div className="row" style={{ marginTop: 6, gap: 4, flexWrap: 'wrap' }}>
-                <button type="button" className="btn btn-sm btn-ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Move ${ex?.name} up`}>
+                <button type="button" className="btn btn-sm btn-ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('routine.moveUp', { name: exName })}>
                   <Icon name="up" size={18} />
                 </button>
-                <button type="button" className="btn btn-sm btn-ghost" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label={`Move ${ex?.name} down`}>
+                <button type="button" className="btn btn-sm btn-ghost" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label={t('routine.moveDown', { name: exName })}>
                   <Icon name="down" size={18} />
                 </button>
                 {i < items.length - 1 && (
@@ -131,10 +134,10 @@ export default function RoutineEditorPage() {
                       relink(items, l);
                     }}
                   >
-                    <Icon name="link" size={18} /> {linked(i) ? 'Unlink' : 'Superset ↓'}
+                    <Icon name="link" size={18} /> {linked(i) ? t('routine.unlink') : t('routine.superset')}
                   </button>
                 )}
-                <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 'auto', color: 'var(--danger)' }} onClick={() => setItems(items.filter((_, k) => k !== i))} aria-label={`Remove ${ex?.name}`}>
+                <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 'auto', color: 'var(--danger)' }} onClick={() => setItems(items.filter((_, k) => k !== i))} aria-label={t('routine.remove', { name: exName })}>
                   <Icon name="trash" size={18} />
                 </button>
               </div>
@@ -143,21 +146,21 @@ export default function RoutineEditorPage() {
         })}
       </ol>
       <button type="button" className="btn btn-block" onClick={() => setPicking(true)}>
-        <Icon name="plus" /> Add exercises
+        <Icon name="plus" /> {t('workout.addExercises')}
       </button>
       {!isNew && (
         <button type="button" className="btn btn-danger btn-block" onClick={() => setConfirmDelete(true)}>
-          <Icon name="trash" /> Delete routine
+          <Icon name="trash" /> {t('routine.delete')}
         </button>
       )}
 
-      <nav className="workout-bar" aria-label="Routine actions">
+      <nav className="workout-bar" aria-label={t('routine.actions')}>
         <div className="workout-bar-inner">
           <button type="button" className="btn" onClick={() => save(false)}>
-            Save
+            {t('common.save')}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => save(true)} disabled={items.length === 0}>
-            Save & start
+            {t('routine.saveStart')}
           </button>
         </div>
       </nav>
@@ -165,7 +168,7 @@ export default function RoutineEditorPage() {
       {picking && (
         <ExercisePicker
           multi
-          title="Add to routine"
+          title={t('routine.addTo')}
           onClose={() => setPicking(false)}
           onPick={(ids) => {
             setItems([...items, ...ids.map((exerciseId) => ({ exerciseId, sets: 3, supersetGroup: null }))]);
@@ -175,9 +178,9 @@ export default function RoutineEditorPage() {
       )}
       {confirmDelete && (
         <ConfirmDialog
-          title="Delete routine?"
-          message="Past workouts are not affected."
-          confirmLabel="Delete"
+          title={t('routine.deleteTitle')}
+          message={t('routine.deleteMsg')}
+          confirmLabel={t('common.delete')}
           danger
           onCancel={() => setConfirmDelete(false)}
           onConfirm={async () => {

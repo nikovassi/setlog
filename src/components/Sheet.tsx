@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useI18n } from '../i18n/react';
 import { Icon } from './Icon';
 
 interface SheetProps {
@@ -14,6 +15,7 @@ interface SheetProps {
 export function Sheet({ title, onClose, children, footer, focusFirstInput }: SheetProps) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const { t } = useI18n();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
@@ -54,7 +56,7 @@ export function Sheet({ title, onClose, children, footer, focusFirstInput }: She
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={ref}>
         <div className="sheet-head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('common.close')}>
             <Icon name="close" />
           </button>
         </div>
@@ -75,6 +77,7 @@ interface ConfirmProps {
 }
 
 export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm, onCancel }: ConfirmProps) {
+  const { t } = useI18n();
   return (
     <Sheet
       title={title}
@@ -82,7 +85,7 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm,
       footer={
         <>
           <button type="button" className="btn" onClick={onCancel}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>
             {confirmLabel}

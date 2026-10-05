@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sheet } from '../../components/Sheet';
 import { isWorkingSet, totalVolume } from '../../utils/calc';
 import { formatDuration, formatNumber } from '../../utils/format';
+import { useI18n } from '../../i18n/react';
 import type { WorkoutData } from './useWorkoutData';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function FinishSheet({ data, onFinish, onDiscard, onClose }: Props) {
+  const { t, pw } = useI18n();
   const all = data.items.flatMap((i) => i.sets);
   const done = all.filter(isWorkingSet).length;
   const filledOpen = all.filter((s) => !s.completed && (s.reps ?? 0) > 0).length;
@@ -22,46 +24,46 @@ export function FinishSheet({ data, onFinish, onDiscard, onClose }: Props) {
 
   return (
     <Sheet
-      title="Finish workout?"
+      title={t('finish.title')}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
-            Keep training
+            {t('finish.keep')}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => (nothing ? onDiscard() : onFinish(keepFilled))}>
-            {nothing ? 'Discard workout' : 'Finish & save'}
+            {nothing ? t('finish.discard') : t('finish.save')}
           </button>
         </>
       }
     >
       <dl className="stat-grid">
         <div className="stat">
-          <dt>Time</dt>
+          <dt>{t('stat.time')}</dt>
           <dd>{formatDuration(duration)}</dd>
         </div>
         <div className="stat">
-          <dt>Sets</dt>
+          <dt>{t('stat.sets')}</dt>
           <dd>{done}</dd>
         </div>
         <div className="stat">
-          <dt>Volume</dt>
+          <dt>{t('stat.volume')}</dt>
           <dd>
-            {formatNumber(totalVolume(all))} <small>kg</small>
+            {formatNumber(totalVolume(all))} <small>{t('common.kg')}</small>
           </dd>
         </div>
       </dl>
       {filledOpen > 0 && (
         <div className="switch card" style={{ padding: '8px 14px' }}>
           <label htmlFor="keep-filled">
-            <strong>Save {filledOpen} unchecked {filledOpen === 1 ? 'set' : 'sets'} as done</strong>
-            <div className="small muted">Otherwise they are discarded.</div>
+            <strong>{t('finish.keepFilled', { n: filledOpen, word: pw(filledOpen, 'set') })}</strong>
+            <div className="small muted">{t('finish.keepFilledHint')}</div>
           </label>
           <input id="keep-filled" type="checkbox" checked={keepFilled} onChange={(e) => setKeep(e.target.checked)} />
         </div>
       )}
-      {empty > 0 && <p className="small muted">{empty} empty {empty === 1 ? 'set' : 'sets'} will be removed.</p>}
-      {nothing && <p className="notice warn">No completed sets yet – finishing now will discard this workout.</p>}
+      {empty > 0 && <p className="small muted">{t('finish.empty', { n: empty, word: pw(empty, 'set') })}</p>}
+      {nothing && <p className="notice warn">{t('finish.nothing')}</p>}
     </Sheet>
   );
 }

@@ -24,3 +24,14 @@ for (const theme of ['dark', 'light'] as const) {
     await scan('progress');
   });
 }
+
+test('no WCAG A/AA violations in Bulgarian', async ({ page }) => {
+  await page.goto('./#/settings');
+  await page.getByRole('button', { name: 'Български' }).click();
+  for (const path of ['./#/settings', './#/', './#/history', './#/progress']) {
+    await page.goto(path);
+    await page.locator('main#main').waitFor();
+    const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(res.violations.map((v) => `${path}: ${v.id}`)).toEqual([]);
+  }
+});

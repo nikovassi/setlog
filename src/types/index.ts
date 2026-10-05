@@ -76,9 +76,11 @@ export interface Routine {
 }
 
 export type Theme = 'dark' | 'light';
+export type Language = 'en' | 'bg';
 
 export interface Settings {
   theme: Theme;
+  language: Language;
   /** Seconds. */
   defaultRest: number;
   autoRest: boolean;

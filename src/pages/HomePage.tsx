@@ -5,12 +5,13 @@ import { initials } from '../features/exercises/ExercisePicker';
 import { useActiveWorkout } from '../hooks/useActiveWorkout';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { loadDataset, overview, progressHighlight, summarize } from '../services/stats';
-import { plural } from '../utils/plural';
 import { formatDayMonth, formatDuration, formatNumber, formatWeight } from '../utils/format';
+import { useI18n } from '../i18n/react';
 import { useStartWorkout } from './WorkoutPage';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { t, pl, exerciseName, muscleName } = useI18n();
   const active = useActiveWorkout();
   const { start, busy } = useStartWorkout();
   const data = useLiveQuery(async () => {
@@ -40,43 +41,43 @@ export default function HomePage() {
       <header className="spread" style={{ minHeight: 48 }}>
         <div>
           <h1>Setlog</h1>
-          <p className="small muted">Log fast. Train hard. Track progress.</p>
+          <p className="small muted">{t('app.tagline')}</p>
         </div>
       </header>
 
-      <section className="hero" aria-label="Workout">
+      <section className="hero" aria-label={t('nav.workout')}>
         {active ? (
           <Link to="/workout" className="card card-link resume">
             <div className="spread">
               <div>
-                <div className="small muted">Workout in progress</div>
+                <div className="small muted">{t('nav.inProgress')}</div>
                 <h2>{active.name}</h2>
               </div>
               <span className="btn btn-primary" aria-hidden>
-                Resume
+                {t('home.resume')}
               </span>
             </div>
           </Link>
         ) : (
           <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => go()} disabled={busy}>
-            <Icon name="plus" /> Start workout
+            <Icon name="plus" /> {t('home.start')}
           </button>
         )}
         {!active && data && data.routines.length > 0 && (
-          <div className="chips" role="group" aria-label="Start from routine">
+          <div className="chips" role="group" aria-label={t('home.fromRoutine')}>
             {data.routines.map((r) => (
               <button key={r.id} type="button" className="chip" onClick={() => go(r.id)} disabled={busy}>
                 {r.name}
               </button>
             ))}
             <Link to="/routines" className="chip" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-              All routines
+              {t('home.allRoutines')}
             </Link>
           </div>
         )}
         {!active && data && data.routines.length === 0 && (
           <Link to="/routines/new" className="small muted">
-            + Create a routine for one-tap starts
+            {t('home.createRoutine')}
           </Link>
         )}
       </section>
@@ -84,8 +85,8 @@ export default function HomePage() {
       {data && !data.last && (
         <div className="card empty">
           <Icon name="dumbbell" size={36} />
-          <h2>No workouts yet</h2>
-          <p>Start your first workout to begin tracking your progress.</p>
+          <h2>{t('home.emptyTitle')}</h2>
+          <p>{t('home.emptyText')}</p>
         </div>
       )}
 
@@ -93,9 +94,9 @@ export default function HomePage() {
         <>
           <section aria-labelledby="last-h">
             <div className="section-title">
-              <h2 id="last-h">Last workout</h2>
+              <h2 id="last-h">{t('home.lastWorkout')}</h2>
               <Link to="/history" className="small muted">
-                History
+                {t('nav.history')}
               </Link>
             </div>
             <Link to={`/history/${data.last.workout.id}`} className="card card-link" style={{ marginTop: 8 }}>
@@ -105,35 +106,39 @@ export default function HomePage() {
               </div>
               <div className="meta" style={{ marginTop: 4 }}>
                 <span>{formatDuration(data.last.workout.duration)}</span>
-                <span>{plural(data.last.exerciseCount, 'exercise')}</span>
-                <span>{plural(data.last.setCount, 'set')}</span>
-                <span>{formatNumber(data.last.volume)} kg</span>
+                <span>{pl(data.last.exerciseCount, 'exercise')}</span>
+                <span>{pl(data.last.setCount, 'set')}</span>
+                <span>
+                  {formatNumber(data.last.volume)} {t('common.kg')}
+                </span>
               </div>
             </Link>
           </section>
 
           <section aria-labelledby="stats-h">
             <div className="section-title">
-              <h2 id="stats-h">This week</h2>
+              <h2 id="stats-h">{t('home.thisWeek')}</h2>
               <Link to="/progress" className="small muted">
-                Progress
+                {t('nav.progress')}
               </Link>
             </div>
             <dl className="stat-grid" style={{ marginTop: 8 }}>
               <div className="stat">
-                <dt>Workouts</dt>
+                <dt>{t('stat.workouts')}</dt>
                 <dd>{data.stats.thisWeek}</dd>
               </div>
               <div className="stat">
-                <dt>Volume</dt>
+                <dt>{t('stat.volume')}</dt>
                 <dd>
-                  {formatNumber(data.stats.weekVolume)} <small>kg</small>
+                  {formatNumber(data.stats.weekVolume)} <small>{t('common.kg')}</small>
                 </dd>
               </div>
               <div className="stat">
-                <dt>PRs <span className="sr-only">this month</span></dt>
+                <dt>
+                  {t('stat.prs')} <span className="sr-only">{t('stat.thisMonthSr')}</span>
+                </dt>
                 <dd>
-                  {data.stats.prsThisMonth} <small>/mo</small>
+                  {data.stats.prsThisMonth} <small>{t('stat.perMonth')}</small>
                 </dd>
               </div>
             </dl>
@@ -141,11 +146,13 @@ export default function HomePage() {
               <Link to={`/exercise/${data.highlight.exercise.id}`} className="card card-link" style={{ marginTop: 8 }}>
                 <div className="spread">
                   <div>
-                    <div className="small muted">Progress · last 8 weeks</div>
-                    <h3>{data.highlight.exercise.name}</h3>
+                    <div className="small muted">{t('home.progress8w')}</div>
+                    <h3>{exerciseName(data.highlight.exercise)}</h3>
                   </div>
                   <div className="num" style={{ fontWeight: 800, fontSize: '1.1rem' }}>
-                    {formatWeight(data.highlight.from)} → <span style={{ color: 'var(--accent)' }}>{formatWeight(data.highlight.to)} kg</span>
+                    {formatWeight(data.highlight.from)} → <span style={{ color: 'var(--accent)' }}>
+                      {formatWeight(data.highlight.to)} {t('common.kg')}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -155,9 +162,9 @@ export default function HomePage() {
           {data.recent.length > 0 && (
             <section aria-labelledby="recent-h">
               <div className="section-title">
-                <h2 id="recent-h">Recent exercises</h2>
+                <h2 id="recent-h">{t('home.recent')}</h2>
                 <Link to="/exercises" className="small muted">
-                  All
+                  {t('common.all')}
                 </Link>
               </div>
               <ul className="list" style={{ marginTop: 8, gap: 0 }}>
@@ -165,11 +172,11 @@ export default function HomePage() {
                   <li key={e.id}>
                     <Link to={`/exercise/${e.id}`} className="pick-item" style={{ textDecoration: 'none' }}>
                       <span className="avatar" aria-hidden>
-                        {initials(e.name)}
+                        {initials(exerciseName(e))}
                       </span>
                       <span className="grow">
-                        <span style={{ display: 'block', fontWeight: 650 }}>{e.name}</span>
-                        <span className="small muted">{e.muscleGroup}</span>
+                        <span style={{ display: 'block', fontWeight: 650 }}>{exerciseName(e)}</span>
+                        <span className="small muted">{muscleName(e.muscleGroup)}</span>
                       </span>
                     </Link>
                   </li>

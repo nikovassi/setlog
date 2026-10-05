@@ -1,4 +1,5 @@
 import { db, initDb, SCHEMA_VERSION } from '../db';
+import { t } from '../i18n';
 import type { Exercise, Routine, SettingRow, Workout, WorkoutExercise, WorkoutSet } from '../types';
 import { estimate1RM, setVolume } from '../utils/calc';
 import { toCSV } from '../utils/csv';
@@ -91,25 +92,25 @@ const MAX_BYTES = 50 * 1024 * 1024;
 
 /** Validates structure and referential integrity. Nothing is written. */
 export function parseBackup(text: string): ParseResult {
-  if (text.length > MAX_BYTES) return { ok: false, error: 'This file is too large to be a Setlog backup.' };
+  if (text.length > MAX_BYTES) return { ok: false, error: t('bk.tooLarge') };
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'This file is not valid JSON. Please choose a Setlog backup (.json).' };
+    return { ok: false, error: t('bk.notJson') };
   }
   if (!isObj(raw) || raw.app !== BACKUP_APP || !isObj(raw.data)) {
-    return { ok: false, error: 'This file is not a Setlog backup.' };
+    return { ok: false, error: t('bk.notBackup') };
   }
   if (typeof raw.schemaVersion !== 'number' || raw.schemaVersion > SCHEMA_VERSION) {
-    return { ok: false, error: 'This backup was made by a newer version of Setlog. Please update the app first.' };
+    return { ok: false, error: t('bk.newer') };
   }
   const data = {} as BackupData;
   for (const key of Object.keys(CHECKS) as (keyof BackupData)[]) {
     const list = (raw.data as Record<string, unknown>)[key] ?? [];
-    if (!Array.isArray(list)) return { ok: false, error: `The backup is damaged: “${key}” is not a list.` };
+    if (!Array.isArray(list)) return { ok: false, error: t('bk.notList', { key }) };
     const bad = list.findIndex((r) => !isObj(r) || !CHECKS[key](r));
-    if (bad >= 0) return { ok: false, error: `The backup is damaged: entry ${bad + 1} in “${key}” is invalid.` };
+    if (bad >= 0) return { ok: false, error: t('bk.badEntry', { n: bad + 1, key }) };
     (data as unknown as Record<string, unknown[]>)[key] = list;
   }
 
@@ -126,7 +127,7 @@ export function parseBackup(text: string): ParseResult {
   const orphanWe = data.workoutExercises.filter((we) => !workoutIds.has(we.workoutId));
   const orphanSets = data.sets.filter((s) => !weIds.has(s.workoutExerciseId) || !workoutIds.has(s.workoutId));
   if (orphanWe.length || orphanSets.length) {
-    warnings.push(`${orphanWe.length + orphanSets.length} entries that don't belong to any workout will be skipped.`);
+    warnings.push(t('bk.orphans', { n: orphanWe.length + orphanSets.length }));
     data.workoutExercises = data.workoutExercises.filter((we) => workoutIds.has(we.workoutId));
     const keptWe = new Set(data.workoutExercises.map((w) => w.id));
     data.sets = data.sets.filter((s) => keptWe.has(s.workoutExerciseId) && workoutIds.has(s.workoutId));
@@ -135,12 +136,12 @@ export function parseBackup(text: string): ParseResult {
   const missingEx = new Set([...data.workoutExercises.map((w) => w.exerciseId), ...data.routines.flatMap((r) => r.exercises.map((e) => e.exerciseId))].filter((id) => !exIds.has(id)));
   if (missingEx.size) {
     // Keep the history readable: missing exercises become placeholders the user can rename.
-    warnings.push(`${missingEx.size} exercise(s) are missing from the backup and will be kept as “Imported exercise” unless they already exist on this device.`);
+    warnings.push(t('bk.missingEx', { n: missingEx.size }));
     for (const id of missingEx) {
-      data.exercises.push({ id, name: `Imported exercise ${id.slice(0, 6)}`, category: 'other', muscleGroup: 'Other', equipment: 'Other', isCustom: true, createdAt: new Date().toISOString() });
+      data.exercises.push({ id, name: t('bk.placeholder', { id: id.slice(0, 6) }), category: 'other', muscleGroup: 'Other', equipment: 'Other', isCustom: true, createdAt: new Date().toISOString() });
     }
   }
-  if (data.workouts.filter((w) => w.status === 'active').length > 0) warnings.push('An unfinished workout in the backup will be imported as finished.');
+  if (data.workouts.filter((w) => w.status === 'active').length > 0) warnings.push(t('bk.active'));
   data.workouts = data.workouts.map((w) => (w.status === 'active' ? { ...w, status: 'completed', endTime: w.endTime ?? w.startTime, duration: w.duration ?? 0 } : w));
 
   const dates = data.workouts.map((w) => w.date).sort();

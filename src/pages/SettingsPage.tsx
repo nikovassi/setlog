@@ -8,10 +8,13 @@ import { useToast } from '../hooks/toast';
 import { downloadFile, exportBackup, exportCSV, importBackup, parseBackup, type ImportMode, type ImportPreview } from '../services/backup';
 import { REST_OPTIONS, updateSettings } from '../services/settings';
 import { formatClock, formatLongDate, todayLocal } from '../utils/format';
+import { LANGUAGES } from '../i18n';
+import { useI18n } from '../i18n/react';
 
 export default function SettingsPage() {
   const s = useSettings();
   const toast = useToast();
+  const { t, pl } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [mode, setMode] = useState<ImportMode>('merge');
@@ -19,15 +22,15 @@ export default function SettingsPage() {
   const [importError, setImportError] = useState('');
 
   const set = (patch: Parameters<typeof updateSettings>[0]) =>
-    updateSettings(patch).catch(() => toast({ message: 'Could not save the setting.', tone: 'error' }));
+    updateSettings(patch).catch(() => toast({ message: t('settings.saveFailed'), tone: 'error' }));
 
   async function doExportJSON() {
     try {
       const backup = await exportBackup();
       downloadFile(`setlog-backup-${todayLocal()}.json`, JSON.stringify(backup, null, 1), 'application/json');
-      toast({ message: 'Backup downloaded', detail: `${backup.data.workouts.length} workouts` });
+      toast({ message: t('settings.downloaded'), detail: pl(backup.data.workouts.length, 'workout') });
     } catch {
-      toast({ message: 'Export failed.', detail: 'Please try again.', tone: 'error' });
+      toast({ message: t('settings.exportFailed'), detail: t('common.tryAgain'), tone: 'error' });
     }
   }
 
@@ -35,7 +38,7 @@ export default function SettingsPage() {
     try {
       downloadFile(`setlog-history-${todayLocal()}.csv`, await exportCSV(), 'text/csv;charset=utf-8');
     } catch {
-      toast({ message: 'Export failed.', detail: 'Please try again.', tone: 'error' });
+      toast({ message: t('settings.exportFailed'), detail: t('common.tryAgain'), tone: 'error' });
     }
   }
 
@@ -49,7 +52,7 @@ export default function SettingsPage() {
         setPreview(res.preview);
       } else setImportError(res.error);
     } catch {
-      setImportError('The file could not be read.');
+      setImportError(t('settings.readFailed'));
     } finally {
       if (fileRef.current) fileRef.current.value = '';
     }
@@ -59,31 +62,32 @@ export default function SettingsPage() {
     if (!preview) return;
     try {
       await importBackup(preview.backup, mode);
-      toast({ message: 'Import complete', detail: `${preview.counts.workouts} workouts ${mode === 'replace' ? 'restored' : 'merged'}` });
+      const workouts = pl(preview.counts.workouts, 'workout');
+      toast({ message: t('settings.importDone'), detail: t(mode === 'replace' ? 'settings.importRestored' : 'settings.importMerged', { workouts }) });
       setPreview(null);
       setConfirmReplace(false);
     } catch {
       setConfirmReplace(false);
-      toast({ message: 'Import failed – nothing was changed.', detail: 'Your existing data is untouched.', tone: 'error' });
+      toast({ message: t('settings.importFailed'), detail: t('settings.importFailedDetail'), tone: 'error' });
     }
   }
 
   return (
     <main className="page" id="main">
-      <PageHeader title="Settings" />
+      <PageHeader title={t('settings.title')} />
 
       <div className="notice" role="note">
         <Icon name="shield" />
         <div>
-          <strong>Your workout data is stored locally on this device.</strong>
-          <div className="small">Nothing is sent to a server and there is no tracking. Export a backup regularly – clearing browser data deletes it.</div>
+          <strong>{t('settings.privacy')}</strong>
+          <div className="small">{t('settings.privacyText')}</div>
         </div>
       </div>
 
       <section className="card stack" aria-labelledby="train-h">
-        <h2 id="train-h">Training</h2>
+        <h2 id="train-h">{t('settings.training')}</h2>
         <div className="field">
-          <span id="rest-label">Default rest time</span>
+          <span id="rest-label">{t('settings.rest')}</span>
           <div className="chips" role="group" aria-labelledby="rest-label" style={{ flexWrap: 'wrap' }}>
             {REST_OPTIONS.map((r) => (
               <button key={r} type="button" className="chip" aria-pressed={s.defaultRest === r} onClick={() => set({ defaultRest: r })}>
@@ -93,97 +97,110 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="switch">
-          <label htmlFor="autorest">Start rest timer when a set is completed</label>
+          <label htmlFor="autorest">{t('settings.autoRest')}</label>
           <input id="autorest" type="checkbox" checked={s.autoRest} onChange={(e) => set({ autoRest: e.target.checked })} />
         </div>
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="small muted" style={{ fontWeight: 600, marginBottom: 6 }}>
-            Default progression (each exercise can override)
+            {t('settings.progression')}
           </legend>
           <div className="row" style={{ gap: 10 }}>
-            <NumberSetting label="Min reps" value={s.repMin} onChange={(v) => v <= s.repMax && (set({ repMin: v }), true)} />
-            <NumberSetting label="Max reps" value={s.repMax} onChange={(v) => v >= s.repMin && (set({ repMax: v }), true)} />
-            <NumberSetting label="Step (kg)" value={s.weightStep} decimal onChange={(v) => (set({ weightStep: v }), true)} />
+            <NumberSetting label={t('prog.min')} value={s.repMin} onChange={(v) => v <= s.repMax && (set({ repMin: v }), true)} />
+            <NumberSetting label={t('prog.max')} value={s.repMax} onChange={(v) => v >= s.repMin && (set({ repMax: v }), true)} />
+            <NumberSetting label={t('prog.step')} value={s.weightStep} decimal onChange={(v) => (set({ weightStep: v }), true)} />
           </div>
         </fieldset>
       </section>
 
       <section className="card stack" aria-labelledby="look-h">
-        <h2 id="look-h">Appearance</h2>
-        <div className="chips" role="group" aria-label="Theme">
-          {(['dark', 'light'] as const).map((t) => (
-            <button key={t} type="button" className="chip" aria-pressed={s.theme === t} onClick={() => set({ theme: t })}>
-              {t === 'dark' ? 'Dark' : 'Light'}
-            </button>
-          ))}
+        <h2 id="look-h">{t('settings.appearance')}</h2>
+        <div className="field">
+          <span id="lang-label">{t('settings.language')}</span>
+          <div className="chips" role="group" aria-labelledby="lang-label">
+            {LANGUAGES.map((l) => (
+              <button key={l.id} type="button" className="chip" lang={l.id} aria-pressed={s.language === l.id} onClick={() => set({ language: l.id })}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <span id="theme-label">{t('settings.theme')}</span>
+          <div className="chips" role="group" aria-labelledby="theme-label">
+            {(['dark', 'light'] as const).map((theme) => (
+              <button key={theme} type="button" className="chip" aria-pressed={s.theme === theme} onClick={() => set({ theme })}>
+                {theme === 'dark' ? t('settings.dark') : t('settings.light')}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="card" aria-labelledby="lib-h" style={{ padding: '6px 6px' }}>
         <h2 id="lib-h" className="sr-only">
-          Library
+          {t('settings.library')}
         </h2>
         <ul className="menu-list">
           <li>
             <Link to="/routines" className="menu-item" style={{ textDecoration: 'none' }}>
-              <Icon name="list" /> Routines
+              <Icon name="list" /> {t('routines.title')}
             </Link>
           </li>
           <li>
             <Link to="/exercises" className="menu-item" style={{ textDecoration: 'none' }}>
-              <Icon name="dumbbell" /> Exercises
+              <Icon name="dumbbell" /> {t('exl.title')}
             </Link>
           </li>
         </ul>
       </section>
 
       <section className="card stack" aria-labelledby="data-h">
-        <h2 id="data-h">Data</h2>
+        <h2 id="data-h">{t('settings.data')}</h2>
         <button type="button" className="btn btn-block" onClick={doExportJSON}>
-          <Icon name="download" /> Export backup (JSON)
+          <Icon name="download" /> {t('settings.exportJson')}
         </button>
         <button type="button" className="btn btn-block" onClick={doExportCSV}>
-          <Icon name="download" /> Export history (CSV)
+          <Icon name="download" /> {t('settings.exportCsv')}
         </button>
         <button type="button" className="btn btn-block" onClick={() => fileRef.current?.click()}>
-          <Icon name="upload" /> Import backup
+          <Icon name="upload" /> {t('settings.import')}
         </button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => onFile(e.target.files?.[0])} aria-label="Choose backup file" data-testid="import-input" />
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => onFile(e.target.files?.[0])} aria-label={t('settings.chooseFile')} data-testid="import-input" />
         {importError && (
           <p className="notice error" role="alert">
             {importError}
           </p>
         )}
-        <p className="small muted">CSV has one row per set (date, exercise, weight, reps, RPE, volume, est. 1RM) and opens in Excel or Google Sheets.</p>
+        <p className="small muted">{t('settings.csvHint')}</p>
       </section>
 
       <p className="small faint" style={{ textAlign: 'center' }}>
-        Setlog {__APP_VERSION__} · works offline · est. 1RM values are estimates
+        {t('settings.footer', { v: __APP_VERSION__ })}
       </p>
 
       {preview && !confirmReplace && (
         <Sheet
-          title="Import backup"
+          title={t('import.title')}
           onClose={() => setPreview(null)}
           footer={
             <>
               <button type="button" className="btn" onClick={() => setPreview(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" className={`btn ${mode === 'replace' ? 'btn-danger' : 'btn-primary'}`} onClick={() => (mode === 'replace' ? setConfirmReplace(true) : runImport())}>
-                {mode === 'replace' ? 'Replace data…' : 'Import'}
+                {mode === 'replace' ? t('import.replaceBtn') : t('import.import')}
               </button>
             </>
           }
         >
-          <p className="muted small">{preview.exportedAt && `Exported ${formatLongDate(preview.exportedAt.slice(0, 10))}`}</p>
-          <ul className="card divider-list" style={{ padding: '0 14px' }} aria-label="Backup contents">
+          <p className="muted small">{preview.exportedAt && t('import.exported', { date: formatLongDate(preview.exportedAt.slice(0, 10)) })}</p>
+          <ul className="card divider-list" style={{ padding: '0 14px' }} aria-label={t('import.contents')}>
             {(
               [
-                ['Workouts', preview.counts.workouts],
-                ['Sets', preview.counts.sets],
-                ['Exercises', preview.counts.exercises],
-                ['Routines', preview.counts.routines],
+                [t('import.workouts'), preview.counts.workouts],
+                [t('import.sets'), preview.counts.sets],
+                [t('import.exercises'), preview.counts.exercises],
+                [t('import.routines'), preview.counts.routines],
               ] as const
             ).map(([k, v]) => (
               <li key={k} className="spread" style={{ minHeight: 40 }}>
@@ -194,7 +211,7 @@ export default function SettingsPage() {
           </ul>
           {preview.dateRange && (
             <p className="small muted">
-              Workouts from {formatLongDate(preview.dateRange.from)} to {formatLongDate(preview.dateRange.to)}
+              {t('import.range', { from: formatLongDate(preview.dateRange.from), to: formatLongDate(preview.dateRange.to) })}
             </p>
           )}
           {preview.warnings.map((w) => (
@@ -204,23 +221,23 @@ export default function SettingsPage() {
           ))}
           <fieldset style={{ border: 0, padding: 0, margin: 0 }} className="stack-sm">
             <legend className="small muted" style={{ fontWeight: 600, marginBottom: 6 }}>
-              How to import
+              {t('import.how')}
             </legend>
             <label className="card row" style={{ cursor: 'pointer' }}>
               <input type="radio" name="mode" checked={mode === 'merge'} onChange={() => setMode('merge')} />
               <span>
-                <strong>Merge</strong>
+                <strong>{t('import.merge')}</strong>
                 <span className="small muted" style={{ display: 'block' }}>
-                  Keep current data and add the backup. Same entries are updated.
+                  {t('import.mergeText')}
                 </span>
               </span>
             </label>
             <label className="card row" style={{ cursor: 'pointer' }}>
               <input type="radio" name="mode" checked={mode === 'replace'} onChange={() => setMode('replace')} />
               <span>
-                <strong>Replace</strong>
+                <strong>{t('import.replace')}</strong>
                 <span className="small muted" style={{ display: 'block' }}>
-                  Delete everything on this device, then restore the backup.
+                  {t('import.replaceText')}
                 </span>
               </span>
             </label>
@@ -229,9 +246,9 @@ export default function SettingsPage() {
       )}
       {confirmReplace && (
         <ConfirmDialog
-          title="Replace all data?"
-          message="All workouts, routines and custom exercises on this device will be deleted and replaced with the backup. This cannot be undone."
-          confirmLabel="Delete & replace"
+          title={t('import.confirmTitle')}
+          message={t('import.confirmMsg')}
+          confirmLabel={t('import.confirmBtn')}
           danger
           onCancel={() => setConfirmReplace(false)}
           onConfirm={runImport}

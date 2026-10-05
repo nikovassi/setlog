@@ -12,8 +12,8 @@ import { routineFromWorkout } from '../services/routines';
 import { loadDataset, prTimeline } from '../services/stats';
 import { addExerciseToWorkout, deleteWorkout, restoreWorkout, updateWorkout } from '../services/workouts';
 import { ExercisePicker } from '../features/exercises/ExercisePicker';
+import { useI18n } from '../i18n/react';
 import { estimate1RM, isWorkingSet, setVolume, totalVolume } from '../utils/calc';
-import { plural } from '../utils/plural';
 import { formatDuration, formatLongDate, formatNumber, formatTime, formatWeight } from '../utils/format';
 
 export default function WorkoutDetailPage() {
@@ -21,6 +21,7 @@ export default function WorkoutDetailPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t, pl, exerciseName } = useI18n();
   const data = useWorkoutData(id, false);
   const prs = useLiveQuery(async () => {
     const timeline = prTimeline(await loadDataset());
@@ -38,9 +39,9 @@ export default function WorkoutDetailPage() {
   if (data === null)
     return (
       <main className="page" id="main">
-        <PageHeader title="Workout" back="/history" />
-        <EmptyState icon="history" title="Workout not found">
-          It may have been deleted.
+        <PageHeader title={t('detail.workout')} back="/history" />
+        <EmptyState icon="history" title={t('detail.notFound')}>
+          {t('detail.notFoundText')}
         </EmptyState>
       </main>
     );
@@ -53,12 +54,12 @@ export default function WorkoutDetailPage() {
     setConfirmDelete(false);
     const snap = await deleteWorkout(workout.id);
     navigate('/history', { replace: true });
-    if (snap) toast({ message: 'Workout deleted', detail: workout.name, action: { label: 'Undo', onClick: () => void restoreWorkout(snap) } });
+    if (snap) toast({ message: t('detail.deleted'), detail: workout.name, action: { label: t('common.undo'), onClick: () => void restoreWorkout(snap) } });
   }
 
   async function saveAsRoutine() {
     const r = await routineFromWorkout(workout);
-    toast({ message: 'Routine saved', detail: r.name, action: { label: 'Open', onClick: () => navigate(`/routines/${r.id}`) } });
+    toast({ message: t('detail.routineSaved'), detail: r.name, action: { label: t('common.open'), onClick: () => navigate(`/routines/${r.id}`) } });
   }
 
   return (
@@ -68,7 +69,7 @@ export default function WorkoutDetailPage() {
         back="/history"
         actions={
           <button type="button" className="btn btn-sm" onClick={() => setEditing((e) => !e)} aria-pressed={editing}>
-            {editing ? 'Done' : 'Edit'}
+            {editing ? t('common.done') : t('common.edit')}
           </button>
         }
       />
@@ -76,17 +77,18 @@ export default function WorkoutDetailPage() {
         <div className="notice" role="status">
           <Icon name="trophy" />
           <div className="grow">
-            <strong>Workout complete!</strong>
+            <strong>{t('detail.complete')}</strong>
             <div className="small">
-              {plural(workingSets, 'set')} · {formatNumber(totalVolume(allSets))} kg{prs && prs.size > 0 ? ` · ${plural(prs.size, 'PR')}` : ''}
+              {pl(workingSets, 'set')} · {formatNumber(totalVolume(allSets))} {t('common.kg')}
+              {prs && prs.size > 0 ? ` · ${pl(prs.size, 'pr')}` : ''}
             </div>
           </div>
-          <button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setParams({}, { replace: true })}>
+          <button type="button" className="icon-btn" aria-label={t('common.dismiss')} onClick={() => setParams({}, { replace: true })}>
             <Icon name="close" size={18} />
           </button>
         </div>
       )}
-      <section className="card stack-sm" aria-label="Summary">
+      <section className="card stack-sm" aria-label={t('detail.summary')}>
         <div className="spread">
           <span className="muted">{formatLongDate(workout.date)}</span>
           <span className="muted num">
@@ -96,17 +98,17 @@ export default function WorkoutDetailPage() {
         </div>
         <dl className="stat-grid">
           <div className="stat">
-            <dt>Time</dt>
+            <dt>{t('stat.time')}</dt>
             <dd>{formatDuration(workout.duration)}</dd>
           </div>
           <div className="stat">
-            <dt>Sets</dt>
+            <dt>{t('stat.sets')}</dt>
             <dd>{workingSets}</dd>
           </div>
           <div className="stat">
-            <dt>Volume</dt>
+            <dt>{t('stat.volume')}</dt>
             <dd>
-              {formatNumber(totalVolume(allSets))} <small>kg</small>
+              {formatNumber(totalVolume(allSets))} <small>{t('common.kg')}</small>
             </dd>
           </div>
         </dl>
@@ -116,14 +118,14 @@ export default function WorkoutDetailPage() {
       {editing ? (
         <>
           <button type="button" className="btn btn-block" onClick={() => setEditMeta(true)}>
-            <Icon name="edit" /> Edit name, date, time & note
+            <Icon name="edit" /> {t('detail.editMeta')}
           </button>
           <WorkoutEditor data={data} mode="edit" prSetIds={prs} />
           <button type="button" className="btn btn-block" onClick={() => setPicking(true)}>
-            <Icon name="plus" /> Add exercise
+            <Icon name="plus" /> {t('workout.addExercise')}
           </button>
           <button type="button" className="btn btn-danger btn-block" onClick={() => setConfirmDelete(true)}>
-            <Icon name="trash" /> Delete workout
+            <Icon name="trash" /> {t('detail.delete')}
           </button>
         </>
       ) : (
@@ -137,36 +139,38 @@ export default function WorkoutDetailPage() {
                     {item.label && <span className="ss-badge">{item.label}</span>}
                     {item.exercise ? (
                       <Link to={`/exercise/${item.exercise.id}`} className="ex-name">
-                        {item.exercise.name}
+                        {exerciseName(item.exercise)}
                       </Link>
                     ) : (
-                      'Unknown exercise'
+                      exerciseName(undefined)
                     )}
                   </h2>
-                  <span className="small muted num">{formatNumber(totalVolume(sets))} kg</span>
+                  <span className="small muted num">
+                    {formatNumber(totalVolume(sets))} {t('common.kg')}
+                  </span>
                 </div>
                 {item.we.notes && <p className="small muted" style={{ fontStyle: 'italic' }}>“{item.we.notes}”</p>}
                 <table className="set-table" style={{ marginTop: 6 }}>
                   <thead>
                     <tr>
-                      <th scope="col">Set</th>
-                      <th scope="col">Weight × reps</th>
+                      <th scope="col">{t('card.set')}</th>
+                      <th scope="col">{t('detail.weightReps')}</th>
                       <th scope="col" className="r">
-                        Volume
+                        {t('stat.volume')}
                       </th>
                       <th scope="col" className="r">
-                        Est. 1RM
+                        {t('detail.e1rm')}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sets.map((s, i) => (
                       <tr key={s.id}>
-                        <td className={s.isWarmup ? 'faint' : ''}>{s.isWarmup ? 'W' : sets.slice(0, i + 1).filter((x) => !x.isWarmup).length}</td>
+                        <td className={s.isWarmup ? 'faint' : ''}>{s.isWarmup ? t('set.warmupShort') : sets.slice(0, i + 1).filter((x) => !x.isWarmup).length}</td>
                         <td>
-                          {formatWeight(s.weight)} kg × {s.reps ?? 0}
+                          {formatWeight(s.weight)} {t('common.kg')} × {s.reps ?? 0}
                           {s.rpe ? <span className="muted"> @{s.rpe}</span> : null}
-                          {prs?.has(s.id) && <span className="pr-tag"> ★ PR</span>}
+                          {prs?.has(s.id) && <span className="pr-tag"> {t('set.pr')}</span>}
                           {s.notes && <div className="small muted">“{s.notes}”</div>}
                         </td>
                         <td className="r">{s.isWarmup ? '–' : formatNumber(setVolume(s))}</td>
@@ -178,12 +182,12 @@ export default function WorkoutDetailPage() {
               </article>
             );
           })}
-          {items.length === 0 && <EmptyState icon="dumbbell" title="No exercises in this workout" />}
+          {items.length === 0 && <EmptyState icon="dumbbell" title={t('detail.noExercises')} />}
           <button type="button" className="btn btn-block" onClick={saveAsRoutine} disabled={items.length === 0}>
-            <Icon name="copy" /> Save as routine
+            <Icon name="copy" /> {t('detail.saveRoutine')}
           </button>
           <p className="small faint" style={{ textAlign: 'center' }}>
-            Est. 1RM uses the Epley formula and is an estimate, not a tested max.
+            {t('detail.e1rmNote')}
           </p>
         </>
       )}
@@ -191,7 +195,7 @@ export default function WorkoutDetailPage() {
       {picking && (
         <ExercisePicker
           multi
-          title="Add exercises"
+          title={t('workout.addExercises')}
           onClose={() => setPicking(false)}
           onPick={async (ids) => {
             setPicking(false);
@@ -202,9 +206,9 @@ export default function WorkoutDetailPage() {
       {editMeta && <MetaSheet workoutId={workout.id} initial={workout} onClose={() => setEditMeta(false)} />}
       {confirmDelete && (
         <ConfirmDialog
-          title="Delete workout?"
-          message={`“${workout.name}” with ${plural(allSets.length, 'set')} will be deleted.`}
-          confirmLabel="Delete"
+          title={t('detail.deleteTitle')}
+          message={t('detail.deleteMsg', { name: workout.name, sets: pl(allSets.length, 'set') })}
+          confirmLabel={t('common.delete')}
           danger
           onCancel={() => setConfirmDelete(false)}
           onConfirm={remove}
@@ -225,6 +229,7 @@ function MetaSheet({ workoutId, initial, onClose }: { workoutId: string; initial
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(toLocalInput(initial.startTime));
   const [minutes, setMinutes] = useState(String(Math.round((initial.duration ?? 0) / 60)));
+  const { t } = useI18n();
 
   function save() {
     const [y, m, d] = date.split('-').map(Number);
@@ -243,27 +248,36 @@ function MetaSheet({ workoutId, initial, onClose }: { workoutId: string; initial
   }
 
   return (
-    <Sheet title="Workout details" onClose={onClose} focusFirstInput footer={<button type="button" className="btn btn-primary" onClick={save}>Save</button>}>
+    <Sheet
+      title={t('workout.details')}
+      onClose={onClose}
+      focusFirstInput
+      footer={
+        <button type="button" className="btn btn-primary" onClick={save}>
+          {t('common.save')}
+        </button>
+      }
+    >
       <label className="field">
-        <span>Name</span>
+        <span>{t('common.name')}</span>
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <div className="row" style={{ gap: 10 }}>
         <label className="field grow">
-          <span>Date</span>
+          <span>{t('meta.date')}</span>
           <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
         <label className="field grow">
-          <span>Start</span>
+          <span>{t('meta.start')}</span>
           <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </label>
       </div>
       <label className="field">
-        <span>Duration (minutes)</span>
+        <span>{t('meta.duration')}</span>
         <input className="input" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value.replace(/\D/g, ''))} />
       </label>
       <label className="field">
-        <span>Note</span>
+        <span>{t('common.note')}</span>
         <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
     </Sheet>

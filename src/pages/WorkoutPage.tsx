@@ -9,6 +9,7 @@ import { useWorkoutData } from '../features/workouts/useWorkoutData';
 import { useActiveWorkout } from '../hooks/useActiveWorkout';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useToast } from '../hooks/toast';
+import { useI18n } from '../i18n/react';
 import { startWorkout } from '../services/workouts';
 
 export default function WorkoutPage() {
@@ -21,6 +22,7 @@ export default function WorkoutPage() {
 
 export function useStartWorkout() {
   const toast = useToast();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const start = async (routineId?: string) => {
     if (busy) return;
@@ -28,7 +30,7 @@ export function useStartWorkout() {
     try {
       await startWorkout({ routineId });
     } catch {
-      toast({ message: 'Could not start the workout.', detail: 'Please try again.', tone: 'error' });
+      toast({ message: t('start.failed'), detail: t('common.tryAgain'), tone: 'error' });
     } finally {
       setBusy(false);
     }
@@ -38,35 +40,36 @@ export function useStartWorkout() {
 
 function StartWorkout() {
   const { start, busy } = useStartWorkout();
+  const { t, exerciseName, lang } = useI18n();
   const routines = useLiveQuery(async () => {
     const [routines, exercises] = await Promise.all([db.routines.orderBy('updatedAt').reverse().toArray(), db.exercises.toArray()]);
-    const names = new Map(exercises.map((e) => [e.id, e.name]));
+    const names = new Map(exercises.map((e) => [e.id, exerciseName(e)]));
     return routines.map((r) => ({ ...r, names: r.exercises.map((e) => names.get(e.exerciseId)).filter(Boolean) as string[] }));
-  }, []);
+  }, [lang]); // names are translated, so recompute when the language changes
 
   return (
     <main className="page" id="main">
-      <PageHeader title="Start workout" />
+      <PageHeader title={t('start.title')} />
       <button type="button" className="btn btn-primary btn-lg btn-block" onClick={() => start()} disabled={busy}>
-        <Icon name="plus" /> Empty workout
+        <Icon name="plus" /> {t('start.empty')}
       </button>
       <div className="section-title">
-        <h2>Routines</h2>
+        <h2>{t('start.routines')}</h2>
         <Link to="/routines" className="small muted">
-          Manage
+          {t('start.manage')}
         </Link>
       </div>
       {routines && routines.length === 0 && (
         <EmptyState
           icon="list"
-          title="No routines yet"
+          title={t('start.noRoutines')}
           action={
             <Link to="/routines/new" className="btn">
-              <Icon name="plus" /> Create routine
+              <Icon name="plus" /> {t('start.createRoutine')}
             </Link>
           }
         >
-          Save your Push, Pull or Legs day once and start it with one tap.
+          {t('start.noRoutinesText')}
         </EmptyState>
       )}
       <ul className="list">
@@ -76,10 +79,10 @@ function StartWorkout() {
               <div className="spread">
                 <div className="grow">
                   <h3>{r.name}</h3>
-                  <p className="small muted truncate">{r.names.join(' · ') || 'No exercises'}</p>
+                  <p className="small muted truncate">{r.names.join(' · ') || t('start.noExercises')}</p>
                 </div>
                 <span className="btn btn-sm btn-primary" aria-hidden>
-                  Start
+                  {t('common.start')}
                 </span>
               </div>
             </button>

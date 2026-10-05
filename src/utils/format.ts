@@ -1,22 +1,22 @@
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+import { dayName, monthName, t } from '../i18n';
 
 export function todayLocal(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** "05 Oct" */
+/** "05 Oct" / "05 окт" */
 export function formatDayMonth(date: string): string {
+  if (!date) return '';
   const [, m, d] = date.split('-').map(Number);
-  return `${String(d).padStart(2, '0')} ${MONTHS[m - 1]}`;
+  return `${String(d).padStart(2, '0')} ${monthName(m)}`;
 }
 
-/** "Mon, 05 Oct 2026" */
+/** "Mon, 05 Oct 2026" / "пн, 05 окт 2026" */
 export function formatLongDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
-  const dow = DAYS[new Date(y, m - 1, d).getDay()];
-  return `${dow}, ${String(d).padStart(2, '0')} ${MONTHS[m - 1]} ${y}`;
+  const dow = dayName(new Date(y, m - 1, d).getDay());
+  return `${dow}, ${String(d).padStart(2, '0')} ${monthName(m)} ${y}`;
 }
 
 export function formatTime(iso: string): string {
@@ -26,10 +26,10 @@ export function formatTime(iso: string): string {
 
 /** Seconds → "48 min" / "1 h 05 min" */
 export function formatDuration(seconds: number | null | undefined): string {
-  if (!seconds || seconds < 60) return '<1 min';
+  if (!seconds || seconds < 60) return t('time.lessThanMin');
   const m = Math.round(seconds / 60);
-  if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+  if (m < 60) return t('time.min', { m });
+  return t('time.hMin', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
 }
 
 /** Seconds → "1:30" */
@@ -53,8 +53,8 @@ export function formatNumber(n: number): string {
 }
 
 export function setLabel(weight: number | null, reps: number | null): string {
-  if (!weight) return `${reps ?? 0} reps`;
-  return `${formatWeight(weight)} kg × ${reps ?? 0}`;
+  if (!weight) return `${reps ?? 0} ${t('set.repsPh')}`;
+  return `${formatWeight(weight)} ${t('common.kg')} × ${reps ?? 0}`;
 }
 
 /** Monday of the ISO week containing `date` (YYYY-MM-DD). */

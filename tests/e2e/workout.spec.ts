@@ -117,3 +117,15 @@ test('light and dark theme', async ({ page }) => {
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
+
+test('Bulgarian language is applied everywhere and survives a reload', async ({ page }) => {
+  await page.goto('./#/settings');
+  await page.getByRole('button', { name: 'Български' }).click();
+  await expect(page.getByRole('heading', { name: 'Настройки', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
+  await expect(page.getByRole('heading', { name: 'Настройки', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Основна навигация' }).getByRole('link', { name: 'Начало' }).click();
+  await expect(page.getByRole('button', { name: 'Започни тренировка' })).toBeVisible();
+  await expect(page.getByText('Записвай бързо. Тренирай здраво. Следи прогреса.')).toBeVisible();
+});

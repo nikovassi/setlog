@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { t } from '../i18n';
 import { describeError } from '../services/errors';
 
 interface State {
@@ -31,7 +32,7 @@ export function FatalScreen({ title, message }: { title: string; message: string
         <h1 style={{ fontSize: '1.3rem' }}>{title}</h1>
         <p className="muted">{message}</p>
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-          Reload
+          {t('err.reload')}
         </button>
         <button
           type="button"
@@ -41,7 +42,7 @@ export function FatalScreen({ title, message }: { title: string; message: string
             window.location.reload();
           }}
         >
-          Go to Home
+          {t('err.home')}
         </button>
       </div>
     </main>

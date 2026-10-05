@@ -6,8 +6,8 @@ import { ConfirmDialog, Sheet } from '../../components/Sheet';
 import { useRestTimer } from '../../hooks/restTimer';
 import { useToast } from '../../hooks/toast';
 import * as W from '../../services/workouts';
+import { useI18n } from '../../i18n/react';
 import { ExercisePicker } from '../exercises/ExercisePicker';
-import { plural } from '../../utils/plural';
 import { Elapsed } from './Elapsed';
 import { FinishSheet } from './FinishSheet';
 import type { WorkoutData } from './useWorkoutData';
@@ -17,6 +17,7 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
   const navigate = useNavigate();
   const toast = useToast();
   const rest = useRestTimer();
+  const { t, pl } = useI18n();
   const [picking, setPicking] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -41,7 +42,7 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
       void navigator.storage?.persist?.().catch(() => {});
       navigate(`/history/${res.workout.id}?done=1`, { replace: true });
     } catch {
-      toast({ message: 'Could not finish the workout.', detail: 'Your data is safe – please try again.', tone: 'error' });
+      toast({ message: t('workout.finishFailed'), detail: t('workout.finishFailedDetail'), tone: 'error' });
     }
   }
 
@@ -50,7 +51,7 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
     rest.stop();
     setDiscarding(false);
     setFinishing(false);
-    toast({ message: 'Workout discarded' });
+    toast({ message: t('workout.discarded') });
     navigate('/', { replace: true });
   }
 
@@ -60,16 +61,16 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
         <header className="workout-top">
           <div className="row">
             <div className="grow" style={{ minWidth: 0 }}>
-              <button type="button" className="workout-title truncate" onClick={() => setEditing(true)} aria-label={`Workout name: ${workout.name}. Edit`}>
+              <button type="button" className="workout-title truncate" onClick={() => setEditing(true)} aria-label={t('workout.editName', { name: workout.name })}>
                 {workout.name}
               </button>
               <div className="row small">
                 <Elapsed since={workout.startTime} />
-                <span className="faint">· {plural(completed, 'set')} done</span>
+                <span className="faint">· {t('workout.setsDone', { sets: pl(completed, 'set') })}</span>
               </div>
             </div>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setFinishing(true)}>
-              Finish
+              {t('workout.finish')}
             </button>
           </div>
         </header>
@@ -77,41 +78,41 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
         {items.length === 0 ? (
           <EmptyState
             icon="dumbbell"
-            title="Add your first exercise"
+            title={t('workout.addFirst')}
             action={
               <button type="button" className="btn btn-primary" onClick={() => setPicking(true)}>
-                <Icon name="plus" /> Add exercise
+                <Icon name="plus" /> {t('workout.addExercise')}
               </button>
             }
           >
-            Pick an exercise and your last performance will appear right here.
+            {t('workout.addFirstText')}
           </EmptyState>
         ) : (
           <WorkoutEditor data={data} mode="active" />
         )}
         <button type="button" className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => (completed ? setDiscarding(true) : discard())}>
-          Discard workout
+          {t('workout.discard')}
         </button>
       </main>
 
-      <nav className="workout-bar" aria-label="Workout actions">
+      <nav className="workout-bar" aria-label={t('workout.actions')}>
         <div className="workout-bar-inner">
           <button type="button" className="btn" onClick={() => setPicking(true)}>
-            <Icon name="plus" /> Exercise
+            <Icon name="plus" /> {t('workout.exerciseBtn')}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setFinishing(true)}>
-            <Icon name="check" /> Finish
+            <Icon name="check" /> {t('workout.finish')}
           </button>
         </div>
       </nav>
 
-      {picking && <ExercisePicker multi title="Add exercises" onPick={addExercises} onClose={() => setPicking(false)} />}
+      {picking && <ExercisePicker multi title={t('workout.addExercises')} onPick={addExercises} onClose={() => setPicking(false)} />}
       {finishing && <FinishSheet data={data} onClose={() => setFinishing(false)} onFinish={finish} onDiscard={discard} />}
       {discarding && (
         <ConfirmDialog
-          title="Discard workout?"
-          message={`${plural(completed, 'completed set')} will be permanently deleted.`}
-          confirmLabel="Discard"
+          title={t('workout.discardTitle')}
+          message={t('workout.discardMsg', { sets: pl(completed, 'completedSet') })}
+          confirmLabel={t('workout.discardConfirm')}
           danger
           onCancel={() => setDiscarding(false)}
           onConfirm={discard}
@@ -119,7 +120,7 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
       )}
       {editing && (
         <Sheet
-          title="Workout details"
+          title={t('workout.details')}
           focusFirstInput
           onClose={() => setEditing(false)}
           footer={
@@ -131,17 +132,17 @@ export function ActiveWorkout({ data }: { data: WorkoutData }) {
                 setEditing(false);
               }}
             >
-              Save
+              {t('common.save')}
             </button>
           }
         >
           <label className="field">
-            <span>Name</span>
+            <span>{t('common.name')}</span>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="field">
-            <span>Workout note</span>
-            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Slept badly, good energy…" />
+            <span>{t('workout.note')}</span>
+            <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('workout.notePh')} />
           </label>
         </Sheet>
       )}

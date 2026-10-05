@@ -1,5 +1,6 @@
 import { db } from '../db';
 import type { Exercise, ExerciseCategory } from '../types';
+import { t } from '../i18n';
 import { newId } from '../utils/id';
 
 export interface ExerciseInput {
@@ -22,9 +23,9 @@ export class ValidationError extends Error {}
 
 export async function createExercise(input: ExerciseInput): Promise<Exercise> {
   const name = input.name.trim();
-  if (!name) throw new ValidationError('Please enter a name.');
+  if (!name) throw new ValidationError(t('err.nameRequired'));
   const clash = await db.exercises.filter((e) => !e.archived && e.name.toLowerCase() === name.toLowerCase()).first();
-  if (clash) throw new ValidationError(`“${clash.name}” already exists.`);
+  if (clash) throw new ValidationError(t('err.exists', { name: clash.name }));
   const ex: Exercise = {
     id: newId(),
     name,
@@ -43,11 +44,11 @@ export async function updateExercise(id: string, patch: Partial<ExerciseInput>):
   const changes: Partial<Exercise> = { ...patch };
   if (patch.name !== undefined) {
     changes.name = patch.name.trim();
-    if (!changes.name) throw new ValidationError('Please enter a name.');
+    if (!changes.name) throw new ValidationError(t('err.nameRequired'));
   }
   if (patch.equipment) changes.category = categoryFor(patch.equipment);
   if (patch.repMin !== undefined && patch.repMax !== undefined && patch.repMin > patch.repMax) {
-    throw new ValidationError('Minimum reps must not exceed maximum reps.');
+    throw new ValidationError(t('err.repRange'));
   }
   await db.exercises.update(id, changes);
 }

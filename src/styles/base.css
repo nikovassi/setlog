@@ -195,6 +195,8 @@ button { cursor: pointer; }
 .rest-inner { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 16px; }
 .rest-time { font-family: var(--mono); font-size: 1.6rem; font-weight: 800; flex: 1; }
 .rest-bar .btn { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 30%, transparent); min-height: 44px; padding: 0 12px; }
+/* The running clock is self-explanatory; on narrow phones give the space to the buttons. */
+@media (max-width: 400px) { .rest-label { display: none; } }
 .rest-progress { height: 4px; background: var(--accent); transition: width 0.25s linear; }
 
 /* ---------- sheets & dialogs ---------- */

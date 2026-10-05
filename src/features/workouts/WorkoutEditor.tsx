@@ -4,8 +4,10 @@ import { useRestTimer } from '../../hooks/restTimer';
 import { useSettings } from '../../hooks/useSettings';
 import * as W from '../../services/workouts';
 import type { WorkoutSet } from '../../types';
-import { formatWeight, setLabel } from '../../utils/format';
-import { PR_LABEL } from '../../utils/pr';
+import { exerciseName, pl, t } from '../../i18n';
+import { useI18n } from '../../i18n/react';
+import { setLabel } from '../../utils/format';
+import { prLabel } from '../../utils/pr';
 import { ExerciseCard, type CardActions } from './ExerciseCard';
 import type { WorkoutData } from './useWorkoutData';
 
@@ -21,11 +23,12 @@ export function WorkoutEditor({ data, mode, prSetIds: initialPRs }: Props) {
   const settings = useSettings();
   const toast = useToast();
   const rest = useRestTimer();
+  const { lang } = useI18n();
   const [sessionPRs, setSessionPRs] = useState<Set<string>>(new Set());
   const prSetIds = useMemo(() => new Set([...(initialPRs ?? []), ...sessionPRs]), [initialPRs, sessionPRs]);
 
   const actions = useMemo<CardActions>(() => {
-    const fail = () => toast({ message: 'Could not save that change.', detail: 'Please try again.', tone: 'error' });
+    const fail = () => toast({ message: t('toast.saveFailed'), detail: t('common.tryAgain'), tone: 'error' });
     return {
       onSetChange: (id, patch) => void W.updateSet(id, patch).catch(fail),
       onSetToggle: async (item, set, values) => {
@@ -41,8 +44,8 @@ export function WorkoutEditor({ data, mode, prSetIds: initialPRs }: Props) {
             setSessionPRs((s) => new Set(s).add(set.id));
             toast({
               tone: 'pr',
-              message: `New PR · ${item.exercise?.name ?? ''}`,
-              detail: `${setLabel(values.weight ?? 0, values.reps)} · ${kinds.map((k) => PR_LABEL[k]).join(', ')}`,
+              message: t('toast.newPR', { name: exerciseName(item.exercise) }),
+              detail: `${setLabel(values.weight ?? 0, values.reps)} · ${kinds.map(prLabel).join(', ')}`,
             });
           }
         } catch {
@@ -53,16 +56,16 @@ export function WorkoutEditor({ data, mode, prSetIds: initialPRs }: Props) {
         const removed = await W.deleteSet(set.id).catch(() => undefined);
         if (!removed) return fail();
         toast({
-          message: 'Set deleted',
+          message: t('toast.setDeleted'),
           detail: removed.weight || removed.reps ? setLabel(removed.weight, removed.reps) : undefined,
-          action: { label: 'Undo', onClick: () => void W.restoreSet(removed) },
+          action: { label: t('common.undo'), onClick: () => void W.restoreSet(removed) },
         });
       },
       onAddSet: (item) => void W.addSet(item.we.id).catch(fail),
       onApplySuggestion: async (item, weight, reps) => {
         const pending = item.sets.filter((s) => !s.completed && !s.isWarmup);
         await Promise.all(pending.map((s) => W.updateSet(s.id, { weight, reps }))).catch(fail);
-        toast({ message: `Using ${weight ? `${formatWeight(weight)} kg × ` : ''}${reps}`, detail: 'You can still change any set.' });
+        toast({ message: t('toast.using', { value: setLabel(weight, reps) }), detail: t('toast.usingHint') });
       },
       onMove: (item, dir) => void W.moveExercise(item.we.id, dir).catch(fail),
       onSuperset: (item) => void W.toggleSupersetWithNext(item.we.id).catch(fail),
@@ -71,13 +74,13 @@ export function WorkoutEditor({ data, mode, prSetIds: initialPRs }: Props) {
         const removed = await W.removeExerciseFromWorkout(item.we.id).catch(() => undefined);
         if (!removed) return fail();
         toast({
-          message: `${item.exercise?.name ?? 'Exercise'} removed`,
-          detail: removed.sets.length ? `${removed.sets.length} set${removed.sets.length > 1 ? 's' : ''}` : undefined,
-          action: { label: 'Undo', onClick: () => void W.restoreExercise(removed) },
+          message: t('toast.removed', { name: exerciseName(item.exercise) }),
+          detail: removed.sets.length ? pl(removed.sets.length, 'set') : undefined,
+          action: { label: t('common.undo'), onClick: () => void W.restoreExercise(removed) },
         });
       },
     };
-  }, [mode, rest, settings.autoRest, settings.defaultRest, toast]);
+  }, [mode, rest, settings.autoRest, settings.defaultRest, toast, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="stack">

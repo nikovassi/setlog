@@ -33,6 +33,7 @@ It has no accounts, no backend, no social feed and no tracking.
 **Platform**
 - **PWA**: installable, works offline after the first visit, standalone display, app icons, and an update prompt (it never reloads in the middle of a workout).
 - **Dark mode** is the default; light mode is also available.
+- **English / Български**: switch in *Settings → Appearance → Language*. The first start follows the browser language. Built-in exercises, muscle groups, equipment, dates and units are translated; your own exercises and routine names are shown as you typed them.
 - **Backup**: export everything as JSON, or your workout history as CSV. You can re-import a JSON backup, with a preview and a choice of merge or replace.
 - **Accessibility**: semantic HTML, ARIA labels on every control, visible focus states, keyboard support (Esc closes sheets, focus is trapped and restored), ≥ 44 px touch targets and WCAG AA contrast (checked with axe in CI).
 
@@ -74,6 +75,7 @@ src/
     exercises/  exercise picker & form
   db/           Dexie schema, migrations, seed library
   hooks/        useLiveQuery, useSettings, rest timer, toasts
+  i18n/         en.ts / bg.ts dictionaries, t(), plurals, library translations
   services/     workouts, routines, exercises, stats, backup, settings, errors
   utils/        calc, pr, progression, format, csv
   types/        entity types
@@ -98,7 +100,7 @@ IndexedDB database `setlog`, schema version 1:
 | `workoutExercises` | `id, workoutId, exerciseId` | `order`, `notes`, `supersetGroup`. |
 | `sets` | `id, workoutExerciseId, workoutId, exerciseId, timestamp` | `weight` (kg), `reps`, `rpe`, `isWarmup`, `completed`, `notes`. `workoutId`/`exerciseId` are denormalised so history queries need one index lookup. |
 | `routines` | `id, name, updatedAt` | `exercises: [{ exerciseId, sets, supersetGroup }]`. |
-| `settings` | `key` | `theme`, `defaultRest`, `autoRest`, `repMin`, `repMax`, `weightStep`. |
+| `settings` | `key` | `theme`, `language`, `defaultRest`, `autoRest`, `repMin`, `repMax`, `weightStep`. |
 
 **Calculations**
 - Volume = weight × reps. It only counts completed working sets; warm-ups are tracked separately.
@@ -135,6 +137,10 @@ To fill the app with demo data for manual testing, generate a backup and import 
 ```bash
 node scripts/make-demo-backup.mjs > demo-backup.json
 ```
+
+## Languages
+
+UI text lives in `src/i18n/en.ts` (the source of truth) and `src/i18n/bg.ts`, which is typed as `Record<MessageKey, string>`, so a missing Bulgarian key is a compile error. Components use `useI18n()`; services and formatters use `t()` with the current language. Stored data is language-neutral: built-in exercises keep their English name in the database and are translated only for display, so backups and CSV exports are the same in both languages and switching language never changes your data.
 
 ## Testing
 
@@ -195,4 +201,4 @@ Not in the MVP:
 - workout recommendations
 - wearable / Health Connect integration
 - optional end-to-end encrypted cloud sync and accounts
-- localisation (e.g. Bulgarian UI)
+- more languages (add a dictionary in `src/i18n/`)

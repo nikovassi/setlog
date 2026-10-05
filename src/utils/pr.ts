@@ -1,14 +1,12 @@
+import { t } from '../i18n';
 import type { WorkoutSet } from '../types';
 import { estimate1RM, isWorkingSet, setVolume } from './calc';
 
 export type PRKind = 'weight' | 'reps' | 'e1rm' | 'volume';
 
-export const PR_LABEL: Record<PRKind, string> = {
-  weight: 'Heaviest weight',
-  reps: 'Most reps at this weight',
-  e1rm: 'Best est. 1RM',
-  volume: 'Best set volume',
-};
+export function prLabel(kind: PRKind): string {
+  return t(`pr.${kind}`);
+}
 
 type SetLike = Pick<WorkoutSet, 'weight' | 'reps' | 'completed' | 'isWarmup'>;
 

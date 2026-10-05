@@ -4,29 +4,38 @@ import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { db } from '../db';
 import { useLiveQuery } from '../hooks/useLiveQuery';
-import { plural } from '../utils/plural';
+import { useI18n } from '../i18n/react';
 
 export default function RoutinesPage() {
+  const { t, pl, exerciseName, lang } = useI18n();
   const routines = useLiveQuery(async () => {
     const [routines, exercises] = await Promise.all([db.routines.orderBy('name').toArray(), db.exercises.toArray()]);
-    const names = new Map(exercises.map((e) => [e.id, e.name]));
+    const names = new Map(exercises.map((e) => [e.id, exerciseName(e)]));
     return routines.map((r) => ({ ...r, names: r.exercises.map((e) => names.get(e.exerciseId) ?? '?') }));
-  }, []);
+  }, [lang]); // names are translated
 
   return (
     <main className="page" id="main">
       <PageHeader
-        title="Routines"
+        title={t('routines.title')}
         back
         actions={
           <Link to="/routines/new" className="btn btn-sm btn-primary">
-            <Icon name="plus" size={18} /> New
+            <Icon name="plus" size={18} /> {t('common.new')}
           </Link>
         }
       />
       {routines?.length === 0 && (
-        <EmptyState icon="list" title="No routines yet" action={<Link to="/routines/new" className="btn btn-primary">Create routine</Link>}>
-          A routine is a list of exercises – e.g. Push, Pull, Legs. Starting one loads every exercise with your last numbers.
+        <EmptyState
+          icon="list"
+          title={t('start.noRoutines')}
+          action={
+            <Link to="/routines/new" className="btn btn-primary">
+              {t('start.createRoutine')}
+            </Link>
+          }
+        >
+          {t('routines.emptyText')}
         </EmptyState>
       )}
       <ul className="list">
@@ -36,7 +45,7 @@ export default function RoutinesPage() {
               <h3>{r.name}</h3>
               {r.description && <p className="small muted">{r.description}</p>}
               <p className="small muted truncate" style={{ marginTop: 4 }}>
-                {plural(r.exercises.length, 'exercise')} · {r.names.join(', ')}
+                {pl(r.exercises.length, 'exercise')} · {r.names.join(', ')}
               </p>
             </Link>
           </li>
